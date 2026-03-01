@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+setup.cfg
+alumniumcucumber/__init__.py
+alumniumcucumber/adapter.py
+alumniumcucumber.egg-info/PKG-INFO
+alumniumcucumber.egg-info/SOURCES.txt
+alumniumcucumber.egg-info/dependency_links.txt
+alumniumcucumber.egg-info/requires.txt
+alumniumcucumber.egg-info/top_level.txt
