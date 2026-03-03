@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: pip install .
+      - name: Dry-run — verify step matching
+        run: behave --dry-run
+
+  examples:
+    name: Examples
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: pip install .
+      - name: Install Playwright browser
+        run: playwright install chromium
+      - name: Cache Alumnium LLM responses
+        uses: actions/cache@v4
+        with:
+          path: .alumnium/cache/
+          key: alumnium-cache-${{ github.sha }}
+          restore-keys: alumnium-cache-
+      - name: Run examples
+        run: behave examples/ --no-capture
+        env:
+          OPENAI_API_KEY: ${{ github.token }}
