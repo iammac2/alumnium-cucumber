@@ -1,5 +1,10 @@
 # alumnium-cucumber
 
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Behave](https://img.shields.io/badge/Behave-Latest-green.svg)](https://behave.readthedocs.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/iammac2/alumnium-cucumber/pulls)
+
 A [behave](https://behave.readthedocs.io/) integration that lets you write plain-English Gherkin feature files and drive [Alumnium](https://github.com/alumnium-hq/alumnium) with **no hand-coded step definitions per scenario**.
 
 Step text is forwarded verbatim to the LLM. The model interprets the instruction, plans browser actions, and executes them — or asserts the stated condition is true. You write the feature file; the model drives the browser.
@@ -38,121 +43,82 @@ Given navigate to "https://example.com"
 
 ---
 
+## Prerequisites
+
+- **Python 3.10+**
+- **A supported LLM provider** — see [Alumnium configuration](https://alumnium.ai/docs/getting-started/configuration/) for the full list and required API keys:
+  - **Ollama** (local, free): install from [ollama.ai](https://ollama.ai), then `ollama pull mistral-small3.1`
+  - **OpenAI**: set `OPENAI_API_KEY`
+  - **Anthropic**: set `ANTHROPIC_API_KEY`
+  - Other providers: Google, MistralAI, DeepSeek, AWS, xAI — see [Alumnium docs](https://alumnium.ai/docs/getting-started/configuration/)
+
+---
+
 ## Installation
 
+> **PyPI coming soon** — install directly from GitHub in the meantime:
+
 ```bash
-pip install alumniumcucumber
+python -m venv .venv && source .venv/bin/activate   # recommended
+pip install git+https://github.com/iammac2/alumnium-cucumber.git
 playwright install chromium
 ```
 
-Configure your AI model via the `ALUMNIUM_MODEL` environment variable
-(see [Alumnium configuration](https://alumnium.ai/docs/getting-started/configuration/)):
+Configure your AI model via the `ALUMNIUM_MODEL` environment variable:
 
 ```bash
-export ALUMNIUM_MODEL=ollama/mistral-small3.1:24b   # local Ollama
-export ALUMNIUM_MODEL=openai/gpt-4o                 # OpenAI
-export ALUMNIUM_MODEL=anthropic/claude-3-5-sonnet-20241022  # Anthropic
+export ALUMNIUM_MODEL=ollama       # local Ollama (uses default model)
+export ALUMNIUM_MODEL=openai       # OpenAI (uses default model)
+export ALUMNIUM_MODEL=anthropic    # Anthropic (uses default model)
 ```
+
+See [Alumnium configuration](https://alumnium.ai/docs/getting-started/configuration/) for the full list of providers and how to select a specific model.
 
 ---
 
 ## Quick start
 
-1. Create `features/environment.py`:
+### Option A: Run the included examples
 
-```python
-from alumniumcucumber import AlumniumGherkinAdapter
-from playwright.sync_api import sync_playwright
-from alumnium import Alumni
-from alumnium.tools import NavigateToUrlTool
+The fastest way to see it working — no files to create:
 
-def before_all(context):
-    context._pw = sync_playwright().start()
-    context._browser = context._pw.chromium.launch(headless=True)
-
-def before_scenario(context, scenario):
-    page = context._browser.new_page()
-    context.al = Alumni(page, extra_tools=[NavigateToUrlTool])
-    context.adapter = AlumniumGherkinAdapter(
-        context.al, include_doc_string=True, include_data_table=True,
-    )
-
-def after_scenario(context, scenario):
-    context.al.quit()
-
-def after_all(context):
-    context._browser.close()
-    context._pw.stop()
+```bash
+git clone https://github.com/iammac2/alumnium-cucumber
+cd alumnium-cucumber
+python -m venv .venv && source .venv/bin/activate
+pip install .
+playwright install chromium
+export ALUMNIUM_MODEL=ollama   # or openai / anthropic etc.
+behave examples/ --no-capture
 ```
 
-2. Create `features/steps/alumnium_steps.py`:
+The `examples/` directory contains ready-to-run feature files with a pre-configured
+`environment.py` and step dispatcher — everything is already set up.
 
-```python
-from alumniumcucumber import GherkinStep
-from behave import given, step, then, use_step_matcher, when
+```bash
+# Dry-run — step matching only, no browser or LLM
+behave examples/ --dry-run
 
-use_step_matcher("re")
-_MATCH_ALL = r"(?P<text>.+)"
+# Single feature file
+behave examples/saucedemo.feature --no-capture
 
-def _step_args(context):
-    doc_string = context.text
-    data_table = [[str(cell) for cell in row] for row in context.table] if context.table else None
-    return doc_string, data_table
-
-@given(_MATCH_ALL)
-def step_given(context, text):
-    doc, table = _step_args(context)
-    context.adapter.dispatch(GherkinStep("Given", text, doc_string=doc, data_table=table))
-
-@when(_MATCH_ALL)
-def step_when(context, text):
-    doc, table = _step_args(context)
-    context.adapter.dispatch(GherkinStep("When", text, doc_string=doc, data_table=table))
-
-@then(_MATCH_ALL)
-def step_then(context, text):
-    doc, table = _step_args(context)
-    context.adapter.dispatch(GherkinStep("Then", text, doc_string=doc, data_table=table))
-
-@step(_MATCH_ALL)
-def step_star(context, text):
-    doc, table = _step_args(context)
-    context.adapter.dispatch(GherkinStep("*", text, doc_string=doc, data_table=table))
+# Scenarios matching a name pattern
+behave examples/ --name "Standard user" --no-capture
 ```
 
-3. Write your feature files and run:
+### Option B: Use in your own project
+
+1. Install the package (see [Installation](#installation) above)
+2. Copy `examples/environment.py` into your project as `features/environment.py`
+3. Copy `examples/steps/alumnium_steps.py` into your project as `features/steps/alumnium_steps.py`
+4. Write your `.feature` files in `features/`
+5. Run:
 
 ```bash
 behave features/ --no-capture
 ```
 
----
-
-## Running the included examples
-
-```bash
-git clone https://github.com/iammac2/alumnium-cucumber
-cd alumnium-cucumber
-pip install -e .
-
-# With a local Ollama model
-ALUMNIUM_MODEL=ollama/mistral-small3.1:24b behave examples/ --no-capture
-
-# With OpenAI
-ALUMNIUM_MODEL=openai/gpt-4o behave examples/ --no-capture
-
-# With Anthropic
-ALUMNIUM_MODEL=anthropic/claude-3-5-sonnet-20241022 behave examples/ --no-capture
-
-# Dry-run — step matching only, no browser or LLM
-behave examples/ --dry-run
-
-# Single feature file
-ALUMNIUM_MODEL=ollama/mistral-small3.1:24b behave examples/saucedemo.feature --no-capture
-
-# Scenarios matching a name pattern
-ALUMNIUM_MODEL=ollama/mistral-small3.1:24b behave examples/ --name "Standard user"
-```
+No further step definitions are needed — the adapter forwards every step to the LLM.
 
 ---
 
