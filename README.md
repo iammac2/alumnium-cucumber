@@ -45,6 +45,7 @@ Given navigate to "https://example.com"
 
 ## Prerequisites
 
+- **[Alumnium](https://github.com/alumnium-hq/alumnium)** — the core AI browser automation framework. See the [installation guide](https://alumnium.ai/docs/getting-started/installation/) for system requirements. Installed automatically as a dependency of this package.
 - **Python 3.10+**
 - **A supported LLM provider** — see [Alumnium configuration](https://alumnium.ai/docs/getting-started/configuration/) for the full list and required API keys:
   - **Ollama** (local, free): install from [ollama.ai](https://ollama.ai), then `ollama pull mistral-small3.1`
