@@ -23,7 +23,7 @@ jobs:
       - name: Install package
         run: pip install .
       - name: Dry-run — verify step matching
-        run: behave --dry-run
+        run: behave examples/ --dry-run
 
   examples:
     name: Examples
