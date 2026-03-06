@@ -29,6 +29,8 @@ jobs:
     name: Examples
     runs-on: ubuntu-latest
     needs: validate
+    permissions:
+      models: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,3 +50,5 @@ jobs:
         run: behave examples/ --no-capture
         env:
           OPENAI_API_KEY: ${{ github.token }}
+          OPENAI_BASE_URL: https://models.inference.ai.azure.com
+          ALUMNIUM_MODEL: openai/gpt-4o-mini
