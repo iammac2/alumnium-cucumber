@@ -94,7 +94,8 @@ behave examples/ --no-capture
 ```
 
 The `examples/` directory contains ready-to-run feature files with a pre-configured
-`environment.py` and step dispatcher — everything is already set up.
+`environment.py` and step dispatcher — everything is already set up, including the
+reporter. An HTML report opens automatically in your browser after each run.
 
 ```bash
 # Dry-run — step matching only, no browser or LLM
@@ -103,6 +104,9 @@ behave examples/ --dry-run
 # Single feature file
 behave examples/saucedemo.feature --no-capture
 
+# Watch the browser live
+HEADLESS=false behave examples/saucedemo.feature --no-capture
+
 # Scenarios matching a name pattern
 behave examples/ --name "Standard user" --no-capture
 ```
@@ -110,16 +114,108 @@ behave examples/ --name "Standard user" --no-capture
 ### Option B: Use in your own project
 
 1. Install the package (see [Installation](#installation) above)
-2. Copy `examples/environment.py` into your project as `features/environment.py`
+2. Copy `examples/environment.py` into your project as `features/environment.py`.
+   The reporter is pre-configured — edit the three variables at the top of the file
+   to set your output directory, report title, and screenshot mode.
 3. Copy `examples/steps/alumnium_steps.py` into your project as `features/steps/alumnium_steps.py`
 4. Write your `.feature` files in `features/`
 5. Run:
 
 ```bash
 behave features/ --no-capture
+
+# Watch the browser live
+HEADLESS=false behave features/ --no-capture
 ```
 
 No further step definitions are needed — the adapter forwards every step to the LLM.
+
+---
+
+## Reporting
+
+After each run `AlumniumReporter` generates a self-contained HTML report and a JSON
+data file, written to a per-run subfolder of your output directory. The HTML report
+opens automatically in your browser. When AI is enabled it also provides per-failure
+root-cause analysis and a plain-English stakeholder narrative summarising the run.
+
+### Configuration
+
+```python
+from alumniumcucumber.reporting import AlumniumReporter
+
+_reporter = AlumniumReporter(
+    output_dir="reports",          # parent folder — each run creates run_{ID}/ inside
+    enable_ai=True,                # False to skip all LLM calls in reports
+    report_title="My App Tests",   # shown in the report header
+    screenshot_mode="on_failure",  # "on_failure" | "every_step" | "off"
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `output_dir` | `str` | `"reports"` | Parent directory. Each run creates a `run_{ID}/` subfolder. |
+| `enable_ai` | `bool` | `True` | Master AI switch. When `False`, skips failure analysis and narrative. |
+| `report_title` | `str` | `"Alumnium Test Report"` | Title shown in the HTML report header. |
+| `screenshot_mode` | `str` | `"on_failure"` | `"on_failure"` captures only failed steps · `"every_step"` captures all steps · `"off"` disables screenshots. |
+
+### Wiring into `environment.py`
+
+```python
+from alumniumcucumber.reporting import AlumniumReporter
+
+_reporter = AlumniumReporter(output_dir="reports", enable_ai=True)
+
+def before_feature(context, feature):
+    _reporter.before_feature(context, feature)
+
+def after_feature(context, feature):
+    _reporter.after_feature(context, feature)
+
+def before_scenario(context, scenario):
+    _reporter.before_scenario(context, scenario)
+    # ... create page, al, adapter ...
+    _reporter.set_model_identity(context.al)   # enriches model name in the report
+
+def after_scenario(context, scenario):
+    _reporter.after_scenario(context, scenario)
+
+def before_step(context, step):
+    _reporter.before_step(context, step)
+
+def after_step(context, step):
+    _reporter.after_step(context, step)
+    # Attach a screenshot for this step (respects screenshot_mode)
+    if hasattr(context, "page"):
+        try:
+            _reporter.attach_screenshot(context.page.screenshot())
+        except Exception:
+            pass
+
+def after_all(context):
+    # ... close browser ...
+    _reporter.generate_report()   # writes the HTML + JSON and opens the browser
+```
+
+See `examples/environment.py` for the complete, ready-to-copy version.
+
+### Output layout
+
+```
+reports/
+└── run_A1B2C3D4/
+    ├── report.html      ← interactive HTML report (opens automatically)
+    ├── report.json      ← raw run data
+    └── screenshots/     ← PNG evidence files (when screenshot_mode ≠ "off")
+```
+
+### Regenerating the HTML from JSON
+
+If you need to re-render the HTML from a saved JSON file (e.g. after a template update):
+
+```bash
+alumnium-report reports/run_A1B2C3D4/report.json
+```
 
 ---
 
@@ -230,6 +326,33 @@ adapter = AlumniumGherkinAdapter(
 )
 adapter.dispatch(step)
 ```
+
+### `AlumniumReporter`
+
+Collects behave lifecycle events and generates the HTML/JSON report.
+
+```python
+from alumniumcucumber.reporting import AlumniumReporter
+
+reporter = AlumniumReporter(
+    output_dir="reports",
+    enable_ai=True,
+    report_title="My App Tests",
+    screenshot_mode="on_failure",
+)
+```
+
+| Method | When to call | Description |
+|---|---|---|
+| `before_feature(context, feature)` | `before_feature` hook | Starts feature timing |
+| `after_feature(context, feature)` | `after_feature` hook | Closes feature timing |
+| `before_scenario(context, scenario)` | `before_scenario` hook | Starts scenario timing |
+| `after_scenario(context, scenario)` | `after_scenario` hook | Closes scenario, triggers AI analysis on failure |
+| `before_step(context, step)` | `before_step` hook | Starts step timing |
+| `after_step(context, step)` | `after_step` hook | Records step result |
+| `set_model_identity(al)` | after `Alumni` is created | Enriches the model name shown in the report |
+| `attach_screenshot(png_bytes)` | `after_step` hook | Saves a PNG screenshot for the current step (respects `screenshot_mode`) |
+| `generate_report()` | `after_all` hook | Writes `report.html` + `report.json`, opens the browser |
 
 ---
 

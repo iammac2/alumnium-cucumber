@@ -1,0 +1,431 @@
+{
+  "run_id": "A1B2C3D4",
+  "title": "Sample Alumnium Test Run",
+  "started_at": "2026-04-02T10:00:00+00:00",
+  "finished_at": "2026-04-02T10:05:30+00:00",
+  "alumnium_model": "anthropic",
+  "summary": {
+    "total_features": 3,
+    "total_scenarios": 8,
+    "passed": 5,
+    "failed": 2,
+    "skipped": 1,
+    "total_duration": 62.5,
+    "pass_rate": 62.5
+  },
+  "features": [
+    {
+      "name": "User Authentication",
+      "file": "features/auth.feature",
+      "description": "Tests for user login and logout flows",
+      "tags": ["@auth", "@smoke"],
+      "scenarios": [
+        {
+          "id": "SC000001",
+          "name": "Successful login with valid credentials",
+          "tags": ["@smoke"],
+          "status": "passed",
+          "duration": 4.25,
+          "started_at": "2026-04-02T10:00:05+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I navigate to the login page",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.02,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I enter valid username and password",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.73,
+              "error_message": null,
+              "doc_string": "username: admin\npassword: secret123",
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "I should see the dashboard",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "passed",
+              "duration": 1.5,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        },
+        {
+          "id": "SC000002",
+          "name": "Login fails with invalid password",
+          "tags": ["@auth"],
+          "status": "failed",
+          "duration": 8.9,
+          "started_at": "2026-04-02T10:00:30+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I navigate to the login page",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 0.95,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I enter an invalid password",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.4,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "I should see an error message",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "failed",
+              "duration": 6.55,
+              "error_message": "AssertionError: al.check() failed.\nExpected error message on login page but found the dashboard instead.",
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": {
+            "summary": "Login page does not display error message for invalid credentials.",
+            "root_cause": "The application appears to be redirecting to the dashboard even when login credentials are invalid. This suggests the authentication check may not be enforcing password validation correctly, or a test session cookie from a prior test is persisting across scenarios.",
+            "suggestion": "Verify that the browser session is cleared between scenarios. Check that the auth endpoint returns a 401 and the frontend correctly handles the error state.",
+            "severity": "high",
+            "provider": "anthropic",
+            "error": null
+          }
+        },
+        {
+          "id": "SC000003",
+          "name": "Logout clears the session",
+          "tags": ["@auth"],
+          "status": "passed",
+          "duration": 5.1,
+          "started_at": "2026-04-02T10:01:30+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I am logged in as a standard user",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 2.1,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I click the logout button",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.2,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "I am redirected to the login page",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "passed",
+              "duration": 1.8,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        }
+      ]
+    },
+    {
+      "name": "Product Catalogue",
+      "file": "features/catalogue.feature",
+      "description": "Tests for browsing and searching the product catalogue",
+      "tags": ["@catalogue"],
+      "scenarios": [
+        {
+          "id": "SC000004",
+          "name": "Search for a product by name",
+          "tags": ["@search"],
+          "status": "passed",
+          "duration": 7.3,
+          "started_at": "2026-04-02T10:02:00+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I am on the products page",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.5,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I search for the following products",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 2.8,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": [
+                ["product_name", "category"],
+                ["Blue Widget", "Widgets"],
+                ["Red Gadget", "Gadgets"]
+              ]
+            },
+            {
+              "keyword": "Then",
+              "text": "I should see matching results",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "passed",
+              "duration": 3.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        },
+        {
+          "id": "SC000005",
+          "name": "Filter products by category",
+          "tags": ["@filter"],
+          "status": "passed",
+          "duration": 6.2,
+          "started_at": "2026-04-02T10:03:00+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I am on the products page",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.2,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I filter by the Widgets category",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 2.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "only Widgets are displayed",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "passed",
+              "duration": 3.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        },
+        {
+          "id": "SC000006",
+          "name": "Add item to cart fails when out of stock",
+          "tags": ["@cart", "@regression"],
+          "status": "failed",
+          "duration": 9.8,
+          "started_at": "2026-04-02T10:03:45+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I am viewing an out-of-stock product",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 2.1,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I click the Add to Cart button",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 1.5,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "I should see an out-of-stock message",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "failed",
+              "duration": 6.2,
+              "error_message": "AssertionError: al.check() failed.\nExpected 'Out of stock' message but the item was added to cart successfully.",
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": {
+            "summary": "Out-of-stock item incorrectly added to cart without displaying stock warning.",
+            "root_cause": "The add-to-cart action succeeded despite the product being marked as out of stock in the test scenario. The frontend stock check may not be functioning, or the product was not correctly set to out-of-stock before the test began.",
+            "suggestion": "Verify the test setup ensures the product inventory is zero before the scenario runs. Check whether the stock validation occurs on the frontend or the backend API.",
+            "severity": "medium",
+            "provider": "anthropic",
+            "error": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "Checkout Flow",
+      "file": "features/checkout.feature",
+      "description": "End-to-end checkout process tests",
+      "tags": ["@checkout", "@e2e"],
+      "scenarios": [
+        {
+          "id": "SC000007",
+          "name": "Complete purchase with credit card",
+          "tags": ["@payment", "@e2e"],
+          "status": "passed",
+          "duration": 15.2,
+          "started_at": "2026-04-02T10:04:00+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "I have items in my cart",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 3.1,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I proceed to checkout and enter payment details",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 5.6,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "And",
+              "text": "I confirm the order",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "passed",
+              "duration": 2.4,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "I should see an order confirmation page",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "passed",
+              "duration": 4.1,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        },
+        {
+          "id": "SC000008",
+          "name": "Promo code application is skipped in staging",
+          "tags": ["@promo", "@skip"],
+          "status": "skipped",
+          "duration": 0.0,
+          "started_at": "2026-04-02T10:05:20+00:00",
+          "steps": [
+            {
+              "keyword": "Given",
+              "text": "promo codes are enabled",
+              "step_type": "given",
+              "alumnium_type": "do",
+              "status": "skipped",
+              "duration": 0.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "When",
+              "text": "I apply a valid promo code",
+              "step_type": "when",
+              "alumnium_type": "do",
+              "status": "skipped",
+              "duration": 0.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            },
+            {
+              "keyword": "Then",
+              "text": "the discount is applied to my order",
+              "step_type": "then",
+              "alumnium_type": "check",
+              "status": "skipped",
+              "duration": 0.0,
+              "error_message": null,
+              "doc_string": null,
+              "data_table": null
+            }
+          ],
+          "ai_analysis": null
+        }
+      ]
+    }
+  ],
+  "screenshot_mode": "on_failure",
+  "narrative": {
+    "headline": "5 of 8 tests passed with 2 key failures requiring attention",
+    "body": "The test run completed with 5 scenarios passing and 2 failing across 3 feature areas. The core login flow and product browsing features are largely functional.\n\nTwo issues were identified that require attention before the next release. The login error handling is not working as expected — when a user enters an incorrect password, they are not shown an error message. Additionally, the out-of-stock protection for the shopping cart is not functioning correctly, allowing items to be added to the cart even when inventory is zero.\n\nThe checkout payment flow and product search features passed all their tests, suggesting the core purchase journey is intact. One scenario covering promotional code functionality was skipped and is not covered in this run.\n\nThe team should prioritise fixing the authentication error display and the stock validation check before shipping to production.",
+    "risk_level": "amber",
+    "provider": "anthropic",
+    "error": null
+  }
+}
