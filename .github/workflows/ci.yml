@@ -25,10 +25,23 @@ jobs:
       - name: Dry-run — verify step matching
         run: behave --dry-run
 
+  reporting-tests:
+    name: Reporting unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package with test extras
+        run: pip install ".[test]"
+      - name: Run reporting unit tests
+        run: pytest tests/reporting/ -q
+
   examples:
     name: Examples
     runs-on: ubuntu-latest
-    needs: validate
+    needs: [validate, reporting-tests]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

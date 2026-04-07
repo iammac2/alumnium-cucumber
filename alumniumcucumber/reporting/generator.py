@@ -138,7 +138,10 @@ if (window.location.protocol === 'file:') {{
 <div id="view-fullreport" class="view">
   <div class="full-report-layout">
     <aside class="sidebar" id="sidebar"></aside>
-    <main class="detail-main" id="detailMain"></main>
+    <div class="detail-main-wrap">
+      <div id="filterBanner"></div>
+      <main class="detail-main" id="detailMain"></main>
+    </div>
     <aside class="screenshot-panel" id="screenshotPanel">
       <div class="sp-placeholder">
         <span class="sp-placeholder-icon">\U0001F4F7</span>
@@ -170,12 +173,26 @@ function toggleTheme() {{
 }})();
 
 // ── Tab navigation ─────────────────────────────────────────────────────
+let _activeFilter = null;   // null | 'passed' | 'failed' | 'skipped'
+
 function switchTab(tab) {{
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('view-' + tab).classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
   if (tab === 'fullreport') renderFullReport();
+}}
+
+function filterFullReport(status) {{
+  _activeFilter = status;
+  _fullRendered = false;
+  switchTab('fullreport');
+}}
+
+function clearFilter() {{
+  _activeFilter = null;
+  _fullRendered = false;
+  renderFullReport();
 }}
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -203,18 +220,18 @@ function fmtDate(iso) {{
 
 function statusIcon(st) {{
   if (st === 'passed') return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-pass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>`;
-  if (st === 'failed') return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-fail)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>`;
+  if (st === 'failed' || st === 'error') return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-fail)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>`;
   return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--status-skip)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>`;
 }}
 
 function statusDot(st, size) {{
   const sz = size || 8;
-  const col = st === 'passed' ? 'var(--status-pass)' : st === 'failed' ? 'var(--status-fail)' : 'var(--status-skip)';
+  const col = st === 'passed' ? 'var(--status-pass)' : (st === 'failed' || st === 'error') ? 'var(--status-fail)' : 'var(--status-skip)';
   return `<span style="display:inline-block;width:${{sz}}px;height:${{sz}}px;border-radius:50%;background:${{col}};flex-shrink:0"></span>`;
 }}
 
 function featureStatus(feat) {{
-  if (feat.scenarios.some(s => s.status === 'failed')) return 'failed';
+  if (feat.scenarios.some(s => s.status === 'failed' || s.status === 'error')) return 'failed';
   if (feat.scenarios.every(s => s.status === 'passed')) return 'passed';
   return 'skipped';
 }}
@@ -236,13 +253,13 @@ function renderDashboard() {{
 
   // Cards
   const cards = [
-    {{ label: 'TOTAL SCENARIOS', value: s.total_scenarios, sub: s.total_features + ' feature(s)', color: 'var(--accent-primary)', valueColor: 'var(--text-primary)' }},
-    {{ label: 'PASSED', value: s.passed, sub: s.pass_rate + '% pass rate', color: 'var(--status-pass)', valueColor: 'var(--status-pass)' }},
-    {{ label: 'FAILED', value: s.failed, sub: s.failed > 0 ? 'Needs attention' : 'All clear ✓', color: 'var(--status-fail)', valueColor: 'var(--status-fail)' }},
-    {{ label: 'SKIPPED', value: s.skipped, sub: 'Not executed', color: 'var(--status-skip)', valueColor: 'var(--status-skip)' }},
+    {{ label: 'TOTAL SCENARIOS', value: s.total_scenarios, sub: s.total_features + ' feature(s)', color: 'var(--accent-primary)', valueColor: 'var(--text-primary)', onclick: "switchTab('fullreport')" }},
+    {{ label: 'PASSED', value: s.passed, sub: s.pass_rate + '% pass rate', color: 'var(--status-pass)', valueColor: 'var(--status-pass)', onclick: "filterFullReport('passed')" }},
+    {{ label: 'FAILED', value: s.failed, sub: s.failed > 0 ? 'Needs attention' : 'All clear ✓', color: 'var(--status-fail)', valueColor: 'var(--status-fail)', onclick: "filterFullReport('failed')" }},
+    {{ label: 'SKIPPED', value: s.skipped, sub: 'Not executed', color: 'var(--status-skip)', valueColor: 'var(--status-skip)', onclick: "filterFullReport('skipped')" }},
   ];
   document.getElementById('cardsGrid').innerHTML = cards.map(c => `
-    <div class="summary-card" style="border-left-color:${{c.color}}">
+    <div class="summary-card summary-card-link" style="border-left-color:${{c.color}}" onclick="${{c.onclick}}">
       <div class="card-label">${{c.label}}</div>
       <div class="card-value" style="color:${{c.valueColor}}">${{c.value}}</div>
       <div class="card-sub">${{esc(c.sub)}}</div>
@@ -299,10 +316,10 @@ function renderFeatureTable(features) {{
   }}
   const rows = features.map((feat, fi) => {{
     const pass = feat.scenarios.filter(s => s.status === 'passed').length;
-    const fail = feat.scenarios.filter(s => s.status === 'failed').length;
-    const skip = feat.scenarios.filter(s => s.status !== 'passed' && s.status !== 'failed').length;
+    const fail = feat.scenarios.filter(s => s.status === 'failed' || s.status === 'error').length;
+    const skip = feat.scenarios.filter(s => s.status !== 'passed' && s.status !== 'failed' && s.status !== 'error').length;
     const dur = feat.scenarios.reduce((a, s) => a + s.duration, 0);
-    const st = feat.scenarios.some(s => s.status === 'failed') ? 'FAILURES' :
+    const st = feat.scenarios.some(s => s.status === 'failed' || s.status === 'error') ? 'FAILURES' :
                feat.scenarios.every(s => s.status === 'passed') ? 'PASSED' : 'SKIPPED';
     const stClass = st === 'FAILURES' ? 'badge-fail' : st === 'PASSED' ? 'badge-pass' : 'badge-skip';
     const bg = fi % 2 === 0 ? 'var(--surface)' : 'var(--bg-secondary)';
@@ -586,11 +603,30 @@ ${{JSON.stringify(REPORT_DATA)}}`;
 // ── Full Report Render ────────────────────────────────────────────────
 let _fullRendered = false;
 
+function _matchesFilter(sc) {{
+  if (!_activeFilter) return true;
+  if (_activeFilter === 'failed') return sc.status === 'failed' || sc.status === 'error';
+  return sc.status === _activeFilter;
+}}
+
+function renderFilterBanner() {{
+  const el = document.getElementById('filterBanner');
+  if (!el) return;
+  if (!_activeFilter) {{ el.innerHTML = ''; return; }}
+  const labels = {{ passed: 'Passed', failed: 'Failed', skipped: 'Skipped' }};
+  const label = labels[_activeFilter] || _activeFilter;
+  el.innerHTML = `<div class="filter-banner">
+    Showing: <strong>${{label}}</strong> scenarios only
+    <button class="filter-clear-btn" onclick="clearFilter()">&#10005; Show all</button>
+  </div>`;
+}}
+
 function renderFullReport() {{
   if (_fullRendered) return;
   _fullRendered = true;
 
   const d = REPORT_DATA;
+  renderFilterBanner();
   renderSidebar(d.features);
   renderDetailMain(d.features);
 }}
@@ -602,18 +638,24 @@ function renderSidebar(features) {{
     return;
   }}
   let html = '<div class="sidebar-title">FEATURES</div>';
+  let firstFeatureShown = true;
   features.forEach((feat, fi) => {{
+    const matching = feat.scenarios.filter(_matchesFilter);
+    if (!matching.length) return;
     const st = featureStatus(feat);
-    const expanded = fi === 0 ? 'expanded' : '';
+    const expanded = firstFeatureShown ? 'expanded' : '';
+    const open = firstFeatureShown ? 'block' : 'none';
+    firstFeatureShown = false;
     html += `<div class="sidebar-feature ${{expanded}}" id="sf-${{fi}}">
       <div class="sf-header" onclick="toggleSidebarFeature(${{fi}})">
         ${{statusDot(st, 8)}}
         <span class="sf-name">${{esc(feat.name)}}</span>
-        <span class="sf-count">${{feat.scenarios.length}}</span>
+        <span class="sf-count">${{matching.length}}</span>
         <span class="sf-chevron" id="sfc-${{fi}}">{_SVG_CHEVRON_RIGHT_INLINE}</span>
       </div>
-      <div class="sf-scenarios" id="sfs-${{fi}}" style="display:${{fi===0?'block':'none'}}">`;
+      <div class="sf-scenarios" id="sfs-${{fi}}" style="display:${{open}}">`;
     feat.scenarios.forEach((sc, si) => {{
+      if (!_matchesFilter(sc)) return;
       html += `<div class="sf-scenario" id="sss-${{fi}}-${{si}}" onclick="scrollToScenario('${{sc.id}}', ${{fi}}, ${{si}})">
         ${{statusDot(sc.status, 6)}}
         <span class="sfs-name">${{esc(sc.name)}}</span>
@@ -652,7 +694,15 @@ function renderDetailMain(features) {{
     el.innerHTML = '<div class="empty-msg">No features recorded.</div>';
     return;
   }}
-  el.innerHTML = features.map((feat, fi) => renderFeatureSection(feat, fi)).join('');
+  const filtered = features.map(feat => ({{
+    ...feat,
+    scenarios: feat.scenarios.filter(_matchesFilter),
+  }})).filter(feat => feat.scenarios.length > 0);
+  if (!filtered.length) {{
+    el.innerHTML = '<div class="empty-msg">No scenarios match this filter.</div>';
+    return;
+  }}
+  el.innerHTML = filtered.map((feat, fi) => renderFeatureSection(feat, fi)).join('');
 }}
 
 function renderFeatureSection(feat, fi) {{
@@ -672,12 +722,12 @@ function renderFeatureSection(feat, fi) {{
 
 function renderScenarioCard(sc) {{
   const st = sc.status;
-  const borderColor = st === 'passed' ? 'var(--status-pass)' : st === 'failed' ? 'var(--status-fail)' : 'var(--status-skip)';
-  const defaultOpen = st === 'failed';
+  const borderColor = st === 'passed' ? 'var(--status-pass)' : (st === 'failed' || st === 'error') ? 'var(--status-fail)' : 'var(--status-skip)';
+  const defaultOpen = st === 'failed' || st === 'error';
   const tags = (sc.tags || []).map(t => `<span class="tag-badge">${{esc(t)}}</span>`).join('');
   const icon20 = st === 'passed' ?
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-pass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>` :
-    st === 'failed' ?
+    (st === 'failed' || st === 'error') ?
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-fail)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>` :
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-skip)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>`;
   const stepsHtml = (sc.steps || []).map((st2, si) => renderStep(st2, si + 1, sc.id)).join('');
@@ -713,19 +763,22 @@ function renderStep(step, stepIdx, scenarioId) {{
     'Then': 'var(--accent-secondary)',
   }};
   const kwColor = kwColors[step.keyword] || 'var(--text-muted)';
-  const stColor = step.status === 'failed' ? 'var(--status-fail)' : 'var(--text-secondary)';
+  const stColor = (step.status === 'failed' || step.status === 'error') ? 'var(--status-fail)' : 'var(--text-secondary)';
   const badge = step.alumnium_type === 'check' ?
     '<span class="call-badge check">check</span>' :
     '<span class="call-badge do">do</span>';
   const stIcon = step.status === 'passed' ?
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--status-pass)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>` :
-    step.status === 'failed' ?
+    (step.status === 'failed' || step.status === 'error') ?
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--status-fail)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>` :
     step.status === 'untested' ? `<span style="color:var(--text-muted);font-size:12px">&#9675;</span>` :
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--status-skip)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>`;
   let extras = '';
-  if (step.status === 'failed' && step.error_message) {{
-    extras += `<div class="error-block">${{esc(step.error_message)}}</div>`;
+  if ((step.status === 'failed' || step.status === 'error') && step.error_message) {{
+    const errLabel = step.status === 'error'
+      ? `<span class="error-type-badge">${{esc(step.exception_type || 'Error')}}</span>`
+      : `<span class="error-type-badge assertion">Assertion failed</span>`;
+    extras += `<div class="error-block">${{errLabel}}${{esc(step.error_message)}}</div>`;
   }}
   if (step.doc_string) {{
     extras += `<div class="doc-string">${{esc(step.doc_string)}}</div>`;
@@ -1019,6 +1072,17 @@ body {
 .card-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 8px; }
 .card-value { font-size: 40px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
 .card-sub { font-size: 12px; color: var(--text-muted); }
+.summary-card-link { cursor: pointer; user-select: none; }
+.summary-card-link:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.filter-banner { display:flex; align-items:center; gap:10px; padding:9px 14px;
+  background:rgba(0,203,169,0.07); border:1px solid rgba(0,203,169,0.2);
+  border-radius:var(--radius); margin-bottom:16px; font-size:13px; color:var(--text-secondary); }
+.filter-banner strong { color:var(--text-primary); }
+.filter-clear-btn { margin-left:auto; background:none; border:1px solid var(--border);
+  border-radius:var(--radius); color:var(--text-muted); font-size:11px; padding:3px 10px;
+  cursor:pointer; transition:var(--transition); font-family:inherit; }
+.filter-clear-btn:hover { border-color:var(--accent-primary); color:var(--accent-primary); }
+.detail-main-wrap { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
 .progress-section { margin-bottom: 24px; }
 .progress-bar-track {
   height: 6px; background: var(--surface); border-radius: var(--radius-pill);
@@ -1201,7 +1265,8 @@ body {
 .sf-scenario:hover { background: var(--surface-hover); }
 .sf-scenario.active { background: var(--surface-hover); border-left-color: var(--accent-primary); }
 .sfs-name { font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.detail-main { flex: 1; overflow-y: auto; padding: 32px 40px; max-width: 960px; }
+.detail-main { flex: 1; overflow-y: auto; padding: 32px 40px 32px; max-width: 960px; }
+.detail-main-wrap .filter-banner { margin: 16px 40px 0; }
 .feat-section { margin-bottom: 48px; }
 .feat-heading {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
@@ -1251,6 +1316,10 @@ body {
   color: var(--status-fail); font-size: 12px; font-family: 'JetBrains Mono', monospace;
   white-space: pre-wrap; word-break: break-all; line-height: 1.6; max-height: 220px; overflow-y: auto;
 }
+.error-type-badge { display:block; font-size:10px; font-weight:600; letter-spacing:.04em;
+  padding:2px 6px; border-radius:3px; margin-bottom:8px; width:fit-content;
+  background:rgba(240,79,95,0.18); color:var(--status-fail); font-family:inherit; text-transform:uppercase; }
+.error-type-badge.assertion { background:rgba(240,79,95,0.08); }
 .doc-string {
   background: var(--bg); border-left: 2px solid var(--border); padding: 8px 12px;
   margin: 4px 0 4px 66px; font-size: 12px; font-family: 'JetBrains Mono', monospace;

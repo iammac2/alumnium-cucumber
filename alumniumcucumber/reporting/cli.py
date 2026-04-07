@@ -24,6 +24,7 @@ def _dict_to_step(d: dict) -> StepData:
         doc_string=d.get("doc_string"),
         data_table=d.get("data_table"),
         screenshot_path=d.get("screenshot_path"),
+        exception_type=d.get("exception_type"),
     )
 
 

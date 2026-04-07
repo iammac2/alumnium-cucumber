@@ -32,6 +32,8 @@ class StepData:
     """Header row first."""
     screenshot_path: str | None = None
     """Relative path from run dir e.g. 'screenshots/ABCD1234_step3.png'. None if not captured."""
+    exception_type: str | None = None
+    """Exception class name for 'error' status steps (e.g. 'RuntimeError'). None otherwise."""
 
 
 @dataclass

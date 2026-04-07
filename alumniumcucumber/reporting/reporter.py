@@ -174,7 +174,7 @@ class AlumniumReporter:
             sum(s.duration for s in self._current_scenario.steps), 3
         )
 
-        if status_str == "failed" and self._enable_ai:
+        if status_str in ("failed", "error") and self._enable_ai:
             try:
                 analyser = AiAnalyser(self._bridge)
                 self._current_scenario.ai_analysis = analyser.analyse(self._current_scenario)
@@ -224,6 +224,12 @@ class AlumniumReporter:
         if error_message and len(error_message) > 4000:
             error_message = error_message[:4000]
 
+        # Capture exception class name for 'error' status steps
+        exception_type = None
+        exc = getattr(step, "exception", None)
+        if exc is not None:
+            exception_type = type(exc).__name__
+
         # Convert data table
         data_table = None
         if hasattr(step, "table") and step.table is not None:
@@ -243,6 +249,7 @@ class AlumniumReporter:
             error_message=error_message,
             doc_string=doc_string,
             data_table=data_table,
+            exception_type=exception_type,
         )
         self._current_scenario.steps.append(step_data)
 
@@ -261,7 +268,7 @@ class AlumniumReporter:
 
         last_step = self._current_scenario.steps[-1]
 
-        if self._screenshot_mode == "on_failure" and last_step.status != "failed":
+        if self._screenshot_mode == "on_failure" and last_step.status not in ("failed", "error"):
             return
 
         step_index = len(self._current_scenario.steps)
@@ -379,7 +386,7 @@ def _compute_summary(run_data: RunData) -> RunSummary:
             total_duration += scenario.duration
             if scenario.status == "passed":
                 passed += 1
-            elif scenario.status == "failed":
+            elif scenario.status in ("failed", "error"):
                 failed += 1
             else:
                 skipped += 1
