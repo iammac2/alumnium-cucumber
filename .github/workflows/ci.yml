@@ -23,7 +23,7 @@ jobs:
       - name: Install package
         run: pip install .
       - name: Dry-run — verify step matching
-        run: behave --dry-run
+        run: behave examples/ --dry-run
 
   reporting-tests:
     name: Reporting unit tests
@@ -61,3 +61,5 @@ jobs:
         run: behave examples/ --no-capture
         env:
           OPENAI_API_KEY: ${{ github.token }}
+          OPENAI_BASE_URL: https://models.inference.ai.azure.com
+          ALUMNIUM_MODEL: openai/gpt-4o-mini
