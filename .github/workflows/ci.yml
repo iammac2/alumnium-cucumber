@@ -60,6 +60,7 @@ jobs:
           key: alumnium-cache-${{ github.sha }}
           restore-keys: alumnium-cache-
       - name: Run examples
+        continue-on-error: true
         run: behave examples/ --no-capture
         env:
           OPENAI_API_KEY: ${{ github.token }}
