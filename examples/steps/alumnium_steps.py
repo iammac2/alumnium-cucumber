@@ -19,13 +19,6 @@ def step_given(context, text):
     context.adapter.dispatch(GherkinStep("Given", text, doc_string=doc, data_table=table))
 
 
-@when(r"wait (?P<seconds>\d+(?:\.\d+)?) seconds?")
-def step_wait(context, seconds):
-    """Pause execution for a defined number of seconds. Thread-safe via time.sleep."""
-    import time
-    time.sleep(float(seconds))
-
-
 @when(_MATCH_ALL)
 def step_when(context, text):
     doc, table = _step_args(context)

@@ -19,10 +19,10 @@ Feature: SauceDemo login
     When type "<username>" into the username field
     And type "secret_sauce" into the password field
     And click the login button
-    And wait <wait_seconds> seconds
+    And wait for the inventory page to display
     Then the page shows an inventory of products
 
     Examples: valid users
-      | username                | wait_seconds |
-      | standard_user           | 2            |
-      | performance_glitch_user | 50           |
+      | username                |
+      | standard_user           |
+      | performance_glitch_user |
