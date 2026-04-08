@@ -4,6 +4,9 @@
 [![Behave](https://img.shields.io/badge/Behave-Latest-green.svg)](https://behave.readthedocs.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/iammac2/alumnium-cucumber/pulls)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-report-blue.svg)](https://iammac2.github.io/alumnium-cucumber/report.html)
+
+**[View latest CI run report →](https://iammac2.github.io/alumnium-cucumber/report.html)**
 
 A [behave](https://behave.readthedocs.io/) integration that lets you write plain-English Gherkin feature files and drive [Alumnium](https://github.com/alumnium-hq/alumnium) with **no hand-coded step definitions per scenario**.
 
