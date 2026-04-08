@@ -19,10 +19,11 @@ def step_given(context, text):
     context.adapter.dispatch(GherkinStep("Given", text, doc_string=doc, data_table=table))
 
 
-@when(r"the page finishes loading")
-def step_wait_for_load(context):
-    """Wait for navigation to the inventory page — bypasses Alumnium, handles slow pages."""
-    context.page.wait_for_selector(".inventory_list", timeout=30_000)
+@when(r"wait (?P<seconds>\d+(?:\.\d+)?) seconds?")
+def step_wait(context, seconds):
+    """Pause execution for a defined number of seconds. Thread-safe via time.sleep."""
+    import time
+    time.sleep(float(seconds))
 
 
 @when(_MATCH_ALL)
