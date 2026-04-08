@@ -20,7 +20,10 @@ def launch(output_dir: Path, html_filename: str) -> str:
     killed on the next run, preventing orphaned processes from accumulating.
     All errors are caught — report files are always written before this is called.
     Returns the URL at which the report is served, or "" on failure.
+    Skipped automatically in CI environments (CI=true).
     """
+    if os.environ.get("CI"):
+        return ""
     try:
         _kill_previous_server(output_dir)
 

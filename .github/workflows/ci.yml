@@ -65,3 +65,18 @@ jobs:
           OPENAI_API_KEY: ${{ github.token }}
           OPENAI_BASE_URL: https://models.inference.ai.azure.com
           ALUMNIUM_MODEL: openai/gpt-4o-mini
+      - name: Upload Alumnium report
+        if: always()
+        id: upload-report
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumnium-report
+          path: reports/
+      - name: Report artifact URL
+        if: always()
+        run: |
+          echo "## Alumnium Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Download:** ${{ steps.upload-report.outputs.artifact-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Extract the zip and open \`run_*/report.html\` in a browser." >> $GITHUB_STEP_SUMMARY

@@ -21,8 +21,8 @@ def step_given(context, text):
 
 @when(r"the page finishes loading")
 def step_wait_for_load(context):
-    """Wait for Playwright networkidle — bypasses Alumnium, handles slow pages."""
-    context.page.wait_for_load_state("networkidle", timeout=15_000)
+    """Wait for navigation to the inventory page — bypasses Alumnium, handles slow pages."""
+    context.page.wait_for_url("**/inventory.html**", timeout=15_000)
 
 
 @when(_MATCH_ALL)
