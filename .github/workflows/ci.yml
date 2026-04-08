@@ -44,11 +44,6 @@ jobs:
     needs: [validate, reporting-tests]
     permissions:
       models: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy-pages.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -78,29 +73,42 @@ jobs:
         with:
           name: alumnium-report
           path: reports/
+      - name: Report artifact URL
+        if: always()
+        run: |
+          echo "## Alumnium Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Download zip:** ${{ steps.upload-report.outputs.artifact-url }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-pages:
+    name: Deploy report to Pages
+    runs-on: ubuntu-latest
+    needs: examples
+    if: github.event_name != 'pull_request'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Download report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: alumnium-report
+          path: reports/
+
       - name: Stage report for Pages
-        if: always() && github.event_name != 'pull_request'
         run: |
           mkdir -p pages
           latest=$(find reports/ -maxdepth 1 -name 'run_*' -type d | sort | tail -1)
           [ -n "$latest" ] && cp -r "$latest"/. pages/
 
       - name: Upload Pages artifact
-        if: always() && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: pages/
 
       - name: Deploy to GitHub Pages
-        if: always() && github.event_name != 'pull_request'
-        id: deploy-pages
+        id: deploy
         uses: actions/deploy-pages@v4
-
-      - name: Report URLs
-        if: always()
-        run: |
-          echo "## Alumnium Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 **Live report:** ${{ steps.deploy-pages.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📦 **Download zip:** ${{ steps.upload-report.outputs.artifact-url }}" >> $GITHUB_STEP_SUMMARY
