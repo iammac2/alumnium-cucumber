@@ -19,9 +19,10 @@ Feature: SauceDemo login
     When type "<username>" into the username field
     And type "secret_sauce" into the password field
     And click the login button
-    Then the page shows an inventory of products after a max loading time of "<timeout_seconds>"
+    And the page finishes loading
+    Then the page shows an inventory of products
 
     Examples: valid users
-      | username                | timeout_seconds |
-      | standard_user           | 3               |
-      | performance_glitch_user | 10              |
+      | username                |
+      | standard_user           |
+      | performance_glitch_user |

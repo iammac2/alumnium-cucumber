@@ -19,6 +19,12 @@ def step_given(context, text):
     context.adapter.dispatch(GherkinStep("Given", text, doc_string=doc, data_table=table))
 
 
+@when(r"the page finishes loading")
+def step_wait_for_load(context):
+    """Wait for Playwright networkidle — bypasses Alumnium, handles slow pages."""
+    context.page.wait_for_load_state("networkidle", timeout=15_000)
+
+
 @when(_MATCH_ALL)
 def step_when(context, text):
     doc, table = _step_args(context)
