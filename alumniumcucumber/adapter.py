@@ -59,8 +59,26 @@ class AlumniumGherkinAdapter:
                 self._al.do(payload)
         except AssertionError:
             raise
+        except AttributeError as exc:
+            # Structured output not supported by this model (response.structured is None).
+            # AttributeError: "'NoneType' object has no attribute 'value'"
+            loc = f" at {step.location}" if step.location else ""
+            if "NoneType" in str(exc):
+                raise RuntimeError(
+                    f"Model does not support structured output, which is required for check "
+                    f"steps. Switch to a compatible model (e.g. ollama/mistral-small3.1 or "
+                    f"ollama/gemma4:31b). Step: '{step.keyword} {step.text}'{loc}"
+                ) from exc
+            raise RuntimeError(f"Alumnium error on '{step.keyword} {step.text}'{loc}") from exc
         except Exception as exc:
             loc = f" at {step.location}" if step.location else ""
+            exc_str = str(exc).lower()
+            if "not found" in exc_str and ("model" in exc_str or "404" in exc_str):
+                raise RuntimeError(
+                    f"Model not found. Verify ALUMNIUM_MODEL is set to a valid model name "
+                    f"and the model is available locally (e.g. 'ollama pull <model>'). "
+                    f"Original error: {exc}"
+                ) from exc
             raise RuntimeError(f"Alumnium error on '{step.keyword} {step.text}'{loc}") from exc
 
     def _resolve(self, keyword: str) -> str:
