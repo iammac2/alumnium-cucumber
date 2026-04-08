@@ -79,20 +79,20 @@ jobs:
           name: alumnium-report
           path: reports/
       - name: Stage report for Pages
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         run: |
           mkdir -p pages
           latest=$(find reports/ -maxdepth 1 -name 'run_*' -type d | sort | tail -1)
           [ -n "$latest" ] && cp -r "$latest"/. pages/
 
       - name: Upload Pages artifact
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: pages/
 
       - name: Deploy to GitHub Pages
-        if: always()
+        if: always() && github.event_name != 'pull_request'
         id: deploy-pages
         uses: actions/deploy-pages@v4
 
