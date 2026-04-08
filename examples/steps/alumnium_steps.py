@@ -22,7 +22,7 @@ def step_given(context, text):
 @when(r"the page finishes loading")
 def step_wait_for_load(context):
     """Wait for navigation to the inventory page — bypasses Alumnium, handles slow pages."""
-    context.page.wait_for_url("**/inventory.html**", timeout=15_000)
+    context.page.wait_for_selector(".inventory_list", timeout=30_000)
 
 
 @when(_MATCH_ALL)
