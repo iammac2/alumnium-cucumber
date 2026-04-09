@@ -53,12 +53,6 @@ jobs:
         run: pip install .
       - name: Install Playwright browser
         run: playwright install chromium
-      - name: Cache Alumnium LLM responses
-        uses: actions/cache@v4
-        with:
-          path: .alumnium/cache/
-          key: alumnium-cache-${{ github.sha }}
-          restore-keys: alumnium-cache-
       - name: Run examples
         continue-on-error: true
         run: behave examples/ --no-capture
@@ -73,6 +67,12 @@ jobs:
         with:
           name: alumnium-report
           path: reports/
+      - name: Upload Alumnium cache
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alumnium-cache
+          path: .alumnium/cache/
       - name: Report artifact URL
         if: always()
         run: |
