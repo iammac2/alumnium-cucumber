@@ -139,6 +139,12 @@ if (window.location.protocol === 'file:') {{
   <div class="full-report-layout">
     <aside class="sidebar" id="sidebar"></aside>
     <div class="detail-main-wrap">
+      <button class="mobile-sidebar-toggle" id="mobileSidebarToggle"
+              onclick="toggleMobileSidebar()" aria-label="Toggle feature list">
+        &#9776; Features
+      </button>
+      <div class="sidebar-backdrop" id="sidebarBackdrop"
+           onclick="closeMobileSidebar()"></div>
       <div id="filterBanner"></div>
       <main class="detail-main" id="detailMain"></main>
     </div>
@@ -686,6 +692,16 @@ function scrollToScenario(scId, fi, si) {{
   if (sel) sel.classList.add('active');
   const el = document.getElementById('sc-' + scId);
   if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+  closeMobileSidebar();
+}}
+
+function toggleMobileSidebar() {{
+  const open = document.getElementById('sidebar').classList.toggle('mobile-open');
+  document.getElementById('sidebarBackdrop').classList.toggle('active', open);
+}}
+function closeMobileSidebar() {{
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarBackdrop').classList.remove('active');
 }}
 
 function renderDetailMain(features) {{
@@ -723,7 +739,7 @@ function renderFeatureSection(feat, fi) {{
 function renderScenarioCard(sc) {{
   const st = sc.status;
   const borderColor = st === 'passed' ? 'var(--status-pass)' : (st === 'failed' || st === 'error') ? 'var(--status-fail)' : 'var(--status-skip)';
-  const defaultOpen = st === 'failed' || st === 'error';
+  const defaultOpen = window.innerWidth > 767 && (st === 'failed' || st === 'error');
   const tags = (sc.tags || []).map(t => `<span class="tag-badge">${{esc(t)}}</span>`).join('');
   const icon20 = st === 'passed' ?
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-pass)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>` :
@@ -932,6 +948,9 @@ function openLightbox(src) {{
 
 // ── Boot ────────────────────────────────────────────────────────────────
 renderDashboard();
+if (window.innerWidth <= 767) {{
+  document.body.appendChild(document.getElementById('screenshotPanel'));
+}}
 document.addEventListener('keydown', function(e) {{
   if (!_spScreenshots.length) return;
   if (e.key === 'ArrowLeft') spPrev();
@@ -1389,6 +1408,80 @@ body {
 .sidebar-empty { padding: 16px; color: var(--text-muted); font-size: 13px; }
 
 code { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+
+/* ── Mobile Full Report ── */
+.mobile-sidebar-toggle { display: none; }
+
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    left: 0; top: 60px;
+    height: calc(100vh - 60px);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    width: 280px;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 6px 0 24px rgba(0,0,0,.4);
+  }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 60px 0 0 0;
+    background: rgba(0,0,0,.45);
+    z-index: 199;
+  }
+  .sidebar-backdrop.active { display: block; }
+  .detail-main { padding: 16px 16px 24px; }
+  .mobile-sidebar-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    width: 100%;
+    background: var(--bg-secondary);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-primary);
+    text-align: left;
+  }
+  .screenshot-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-width: 100vw;
+    box-sizing: border-box;
+    height: 0;
+    top: auto;
+    z-index: 210;
+    border-left: none;
+    border-top: 2px solid var(--border);
+    transition: height .25s ease;
+  }
+  .sp-image-wrap { max-width: 100%; box-sizing: border-box; }
+  .sp-image      { max-width: 100%; }
+  .screenshot-panel.visible { height: calc(100vh - 60px); }
+
+  /* Clip panel content during height animation */
+  .screenshot-panel         { overflow: hidden; }
+  .screenshot-panel.visible { overflow-y: auto; overflow-x: hidden; }
+
+  /* Hide hover popover — tap fires openScenarioScreenshots() instead */
+  .step-thumb-popover { display: none !important; }
+
+  /* Prevent step row overflowing container */
+  .step-main { flex-wrap: wrap; overflow: hidden; }
+  .step-text  { flex: 1 1 0; min-width: 0; }
+
+  /* Fit image and enlarge touch targets inside bottom sheet */
+  .sp-image   { max-height: calc(100vh - 210px); }
+  .sp-nav-btn { padding: 8px 18px; font-size: 14px; }
+  .sp-close   { font-size: 22px; padding: 4px 10px; }
+}
 """
 
 
