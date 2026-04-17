@@ -137,3 +137,9 @@ class RunData:
     """None if AI disabled or generation failed."""
     screenshot_mode: str = "on_failure"
     """'on_failure' | 'every_step' | 'off'"""
+    chat_api_key: str | None = None
+    """Pre-configured API key embedded in the report for hosted chat. Visible in HTML source."""
+    chat_api_base: str | None = None
+    """OpenAI-compatible base URL for the pre-configured chat provider."""
+    chat_model: str | None = None
+    """Model to use for pre-configured chat (may differ from alumnium_model)."""
