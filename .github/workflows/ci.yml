@@ -60,6 +60,9 @@ jobs:
           OPENAI_API_KEY: ${{ github.token }}
           OPENAI_BASE_URL: https://models.inference.ai.azure.com
           ALUMNIUM_MODEL: openai/gpt-4o-mini
+          ALUMNIUM_CHAT_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ALUMNIUM_CHAT_BASE_URL: https://openrouter.ai/api/v1
+          ALUMNIUM_CHAT_MODEL: openai/gpt-oss-20b:free
       - name: Upload Alumnium report
         if: always()
         id: upload-report

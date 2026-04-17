@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 import sys
 import time
@@ -102,6 +103,9 @@ class AlumniumReporter:
             features=[],
             narrative=None,
             screenshot_mode=screenshot_mode,
+            chat_api_key=os.environ.get("ALUMNIUM_CHAT_API_KEY") or None,
+            chat_api_base=os.environ.get("ALUMNIUM_CHAT_BASE_URL") or None,
+            chat_model=os.environ.get("ALUMNIUM_CHAT_MODEL") or None,
         )
         self._current_feature: FeatureData | None = None
         self._current_scenario: ScenarioData | None = None
