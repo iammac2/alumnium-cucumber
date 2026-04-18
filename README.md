@@ -359,6 +359,12 @@ reporter = AlumniumReporter(
 
 ---
 
+## GISTS
+
+[Alumnium + Ollama Local Dev Testing Guide](https://gist.github.com/iammac2/8a0ce9c543642d12eb4b48e2a3b62061)
+
+[Alumnium + Ollama + qwen3.6 Test Results](https://gist.github.com/iammac2/04c374f3de3de548d93c4615ca2e5eb6)
+
 ## Contributor
 
 [neuno.ai](https://neuno.ai)
