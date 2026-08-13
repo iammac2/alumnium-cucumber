@@ -1,8 +1,13 @@
-"""Tests for consuming Alumnium's `al.metrics`/artifacts contract (issue #8)."""
+"""Tests for consuming Alumnium's `al.metrics`/artifacts contract (issue #8).
 
+These use lightweight local fakes rather than importing `alumnium.metrics`, so the reporter's
+consumption logic is tested independently of the installed Alumnium version. This matches the
+reporter's duck-typed / graceful-degradation contract and keeps the unit tests runnable against
+any Alumnium release (including ones predating the metrics API).
+"""
+
+from dataclasses import dataclass
 from types import SimpleNamespace
-
-from alumnium.metrics import Artifact, SessionMetrics, StepMetrics, TokenUsage
 
 from alumniumcucumber.reporting.models import (
     FeatureData,
@@ -14,15 +19,31 @@ from alumniumcucumber.reporting.models import (
 from alumniumcucumber.reporting.reporter import AlumniumReporter, _aggregate_tokens
 
 
+@dataclass
+class _Tokens:
+    """Duck-type of alumnium.metrics.TokenUsage (a dataclass, so dataclasses.asdict works)."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    cache_creation: int = 0
+    cache_read: int = 0
+    reasoning: int = 0
+
+
+def _artifact(path, kind="screenshot", mime="image/png"):
+    return SimpleNamespace(path=path, kind=kind, mime=mime)
+
+
 def _step_metrics(kind="do", outcome="passed", tokens=None, artifacts=None):
-    return StepMetrics(
+    return SimpleNamespace(
         kind=kind,
         label="a step",
         outcome=outcome,
         started_at=1.0,
         finished_at=1.5,
         duration=0.5,
-        tokens=tokens or TokenUsage(input_tokens=10, output_tokens=2, total_tokens=12),
+        tokens=tokens or _Tokens(input_tokens=10, output_tokens=2, total_tokens=12),
         artifacts=artifacts or [],
     )
 
@@ -69,8 +90,8 @@ def test_enrich_populates_tokens_duration_outcome_and_artifacts(tmp_path):
 
     shot = tmp_path / "src.png"
     shot.write_bytes(b"fake-png-bytes")
-    ms = _step_metrics(artifacts=[Artifact(path=shot, kind="screenshot", mime="image/png")])
-    ctx = _context(SessionMetrics(started_at=0, finished_at=2, duration=2, steps=[ms]), tmp_path)
+    ms = _step_metrics(artifacts=[_artifact(shot)])
+    ctx = _context(SimpleNamespace(steps=[ms]), tmp_path)
 
     step_data = _step_data()
     reporter._current_scenario.steps.append(step_data)
@@ -92,8 +113,8 @@ def test_screenshot_mode_on_failure_skips_passed_step(tmp_path):
 
     shot = tmp_path / "src.png"
     shot.write_bytes(b"fake-png-bytes")
-    ms = _step_metrics(artifacts=[Artifact(path=shot, kind="screenshot", mime="image/png")])
-    ctx = _context(SessionMetrics(started_at=0, finished_at=2, duration=2, steps=[ms]), tmp_path)
+    ms = _step_metrics(artifacts=[_artifact(shot)])
+    ctx = _context(SimpleNamespace(steps=[ms]), tmp_path)
 
     step_data = _step_data(status="passed")
     reporter._current_scenario.steps.append(step_data)
@@ -108,7 +129,7 @@ def test_positional_correlation_skips_non_dispatching_step(tmp_path):
     reporter = _reporter(tmp_path)
     reporter._current_scenario = _scenario()
 
-    metrics = SessionMetrics(started_at=0, finished_at=2, duration=2, steps=[_step_metrics()])
+    metrics = SimpleNamespace(steps=[_step_metrics()])
     ctx = _context(metrics, tmp_path)
 
     # First step dispatched to Alumnium -> consumes the single metrics entry.
