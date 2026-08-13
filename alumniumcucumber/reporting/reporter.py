@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import secrets
+import shutil
 import sys
 import time
 from datetime import datetime, timezone
@@ -111,6 +113,11 @@ class AlumniumReporter:
         self._current_scenario: ScenarioData | None = None
         self._step_start: float = 0.0
         self._prev_step_type: str | None = None
+        # al.metrics entries consumed so far in the current scenario (issue #8).
+        self._consumed: int = 0
+        # (ScenarioData, al.artifacts_dir) pairs, for collecting traces at report time.
+        self._scenario_artifacts: list[tuple[ScenarioData, str]] = []
+        self._traces_dir = self._run_dir / "traces"
 
     @_safe("before_feature")
     def before_feature(self, context, feature) -> None:
@@ -147,6 +154,8 @@ class AlumniumReporter:
             ai_analysis=None,
         )
         self._prev_step_type = None
+        # A fresh Alumni instance is created per scenario, so its metrics list resets too.
+        self._consumed = 0
 
     def set_model_identity(self, al: object) -> None:
         """Enrich alumnium_model with the resolved name from the Alumni instance.
@@ -170,6 +179,16 @@ class AlumniumReporter:
         """Finalise the scenario, run AI analysis if needed, append to feature."""
         if self._current_scenario is None:
             return
+
+        # Capture the Alumnium artifacts dir while the session/driver are still alive
+        # (environment.py calls al.quit() after this hook). The Playwright trace.zip is
+        # written on quit, so it is collected later at report-generation time.
+        al = getattr(context, "al", None)
+        if al is not None:
+            try:
+                self._scenario_artifacts.append((self._current_scenario, str(al.artifacts_dir)))
+            except Exception:  # noqa: BLE001
+                pass  # older Alumnium without artifacts support
 
         # Map behave Status to string
         status_str = _status_to_str(scenario.status)
@@ -256,6 +275,79 @@ class AlumniumReporter:
             exception_type=exception_type,
         )
         self._current_scenario.steps.append(step_data)
+        self._enrich_from_metrics(context, step_data)
+
+    def _al_metrics(self, context):
+        """Return al.metrics for the current scenario, or None (older/absent Alumnium)."""
+        al = getattr(context, "al", None)
+        if al is None:
+            return None
+        try:
+            return al.metrics
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _enrich_from_metrics(self, context, step_data: StepData) -> None:
+        """Attach per-step tokens/duration/outcome/artifacts from al.metrics (issue #8).
+
+        Correlation is positional: metrics entries are consumed in call order. A step that
+        did not dispatch to Alumnium simply adds no new entry, so alignment is preserved.
+        Degrades gracefully when al.metrics is unavailable.
+        """
+        metrics = self._al_metrics(context)
+        if metrics is None:
+            return
+        try:
+            all_steps = list(metrics.steps)
+        except Exception:  # noqa: BLE001
+            return
+        new_steps = all_steps[self._consumed :]
+        self._consumed = len(all_steps)
+        if not new_steps:
+            return
+
+        ms = new_steps[-1]
+        step_data.tokens = dataclasses.asdict(ms.tokens)
+        step_data.alumnium_duration = ms.duration
+        step_data.alumnium_outcome = ms.outcome
+        step_data.artifacts = [{"path": str(a.path), "kind": a.kind, "mime": a.mime} for a in ms.artifacts]
+        self._copy_screenshot_from_metrics(ms, step_data)
+
+    def _copy_screenshot_from_metrics(self, ms, step_data: StepData) -> None:
+        """Copy a screenshot captured by Alumnium into the report dir, honouring screenshot_mode."""
+        if self._screenshot_mode == "off":
+            return
+        if self._screenshot_mode == "on_failure" and step_data.status not in ("failed", "error"):
+            return
+        if self._current_scenario is None:
+            return
+        shots = [a for a in ms.artifacts if a.kind == "screenshot"]
+        if not shots:
+            return
+        src = Path(shots[-1].path)
+        if not src.exists():
+            return
+        index = len(self._current_scenario.steps)
+        filename = f"{self._current_scenario.id}_step{index}.png"
+        try:
+            self._screenshots_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, self._screenshots_dir / filename)
+            step_data.screenshot_path = f"screenshots/{filename}"
+        except Exception as e:  # noqa: BLE001
+            print(f"[alumnium-reporter] WARNING: screenshot copy failed: {e}", file=sys.stderr)
+
+    def _collect_traces(self) -> None:
+        """Copy each scenario's Playwright trace.zip (written on al.quit()) into the report."""
+        for scenario_data, artifacts_dir in self._scenario_artifacts:
+            src = Path(artifacts_dir) / "trace.zip"
+            if not src.exists():
+                continue
+            try:
+                self._traces_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(src, self._traces_dir / f"{scenario_data.id}.zip")
+                scenario_data.trace_path = f"traces/{scenario_data.id}.zip"
+            except Exception as e:  # noqa: BLE001
+                print(f"[alumnium-reporter] WARNING: trace copy failed: {e}", file=sys.stderr)
 
     def attach_screenshot(self, png_bytes: bytes | None) -> None:
         """Write a PNG screenshot for the most recently recorded step.
@@ -310,6 +402,8 @@ class AlumniumReporter:
 
         self._run_data.finished_at = datetime.now(timezone.utc).isoformat()
         self._run_data.summary = _compute_summary(self._run_data)
+        self._collect_traces()
+        self._run_data.total_tokens = _aggregate_tokens(self._run_data)
 
         if self._enable_ai:
             if not self._bridge._raw_model:
@@ -373,6 +467,30 @@ def _derive_alumnium_type(step_type: str, prev_step_type: str | None) -> str:
     if prev_step_type == "then":
         return "check"
     return "do"
+
+
+_TOKEN_KEYS = (
+    "input_tokens",
+    "output_tokens",
+    "total_tokens",
+    "cache_creation",
+    "cache_read",
+    "reasoning",
+)
+
+
+def _aggregate_tokens(run_data: RunData) -> dict | None:
+    """Sum per-step token usage across the whole run. Returns None if no metrics were captured."""
+    total = {key: 0 for key in _TOKEN_KEYS}
+    seen = False
+    for feature in run_data.features:
+        for scenario in feature.scenarios:
+            for step in scenario.steps:
+                if step.tokens:
+                    seen = True
+                    for key in _TOKEN_KEYS:
+                        total[key] += int(step.tokens.get(key, 0))
+    return total if seen else None
 
 
 def _compute_summary(run_data: RunData) -> RunSummary:

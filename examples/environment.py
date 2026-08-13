@@ -88,11 +88,7 @@ def before_step(context, step):
 
 
 def after_step(context, step):
+    # Screenshots (and a Playwright trace) are captured by Alumnium itself and pulled from
+    # `al.metrics` / `al.artifacts_dir` by the reporter — driver-agnostic, no manual capture.
+    # (On older Alumnium without metrics support, call _reporter.attach_screenshot(...) here.)
     _reporter.after_step(context, step)
-    # Screenshot evidence — Playwright
-    if hasattr(context, "page"):
-        try:
-            _reporter.attach_screenshot(context.page.screenshot())
-        except Exception:  # noqa: BLE001
-            pass  # never let screenshot failure affect the test result
-    # For Selenium: context.driver.get_screenshot_as_png()

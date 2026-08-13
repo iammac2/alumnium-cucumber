@@ -34,6 +34,14 @@ class StepData:
     """Relative path from run dir e.g. 'screenshots/ABCD1234_step3.png'. None if not captured."""
     exception_type: str | None = None
     """Exception class name for 'error' status steps (e.g. 'RuntimeError'). None otherwise."""
+    tokens: dict | None = None
+    """Per-step token usage from al.metrics (input_tokens, output_tokens, total_tokens, ...). None if unavailable."""
+    alumnium_duration: float | None = None
+    """Precise per-call duration (seconds) reported by al.metrics. None if unavailable."""
+    alumnium_outcome: str | None = None
+    """'passed' | 'failed' from al.metrics (by thrown exception). None if unavailable."""
+    artifacts: list[dict] | None = None
+    """Typed artifacts for this step: [{'path', 'kind', 'mime'}]. None if unavailable."""
 
 
 @dataclass
@@ -71,6 +79,8 @@ class ScenarioData:
     steps: list[StepData]
     ai_analysis: AiAnalysis | None
     """None unless status == 'failed' and AI enabled."""
+    trace_path: str | None = None
+    """Relative path to the Playwright trace archive (e.g. 'traces/ABCD1234.zip'). None if not captured."""
 
 
 @dataclass
@@ -143,3 +153,5 @@ class RunData:
     """OpenAI-compatible base URL for the pre-configured chat provider."""
     chat_model: str | None = None
     """Model to use for pre-configured chat (may differ from alumnium_model)."""
+    total_tokens: dict | None = None
+    """Session token totals aggregated from al.metrics across the run. None if unavailable."""

@@ -821,6 +821,9 @@ function renderScenarioCard(sc) {{
     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--status-skip)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>`;
   const stepsHtml = (sc.steps || []).map((st2, si) => renderStep(st2, si + 1, sc.id)).join('');
   const aiHtml = sc.ai_analysis ? renderAiAnalysis(sc.ai_analysis) : '';
+  const traceHtml = sc.trace_path
+    ? `<div class="sc-trace"><a href="${{sc.trace_path}}" download>&#128190; Download Playwright trace</a></div>`
+    : '';
   const bodyStyle = defaultOpen ? '' : 'display:none';
   const chevronInitial = defaultOpen ? `{_SVG_CHEVRON_DOWN_INLINE}` : `{_SVG_CHEVRON_RIGHT_INLINE}`;
   return `<div class="scenario-card" id="sc-${{sc.id}}" style="border-left-color:${{borderColor}}">
@@ -833,6 +836,7 @@ function renderScenarioCard(sc) {{
     </div>
     <div class="sc-body" id="scb-${{sc.id}}" style="${{bodyStyle}}">
       <div class="steps-list">${{stepsHtml}}</div>
+      ${{traceHtml}}
       ${{aiHtml}}
     </div>
   </div>`;
@@ -892,6 +896,7 @@ function renderStep(step, stepIdx, scenarioId) {{
       ${{badge}}
       <span class="step-icon">${{stIcon}}</span>
       <span class="step-dur">${{fmt(step.duration)}}</span>
+      ${{step.tokens && step.tokens.total_tokens ? `<span class="step-tokens" title="LLM tokens">${{step.tokens.total_tokens}} tok</span>` : ''}}
       ${{thumbHtml}}
     </div>
     ${{extras}}
