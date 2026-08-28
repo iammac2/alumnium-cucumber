@@ -162,6 +162,17 @@ _reporter = AlumniumReporter(
 | `report_title` | `str` | `"Alumnium Test Report"` | Title shown in the HTML report header. |
 | `screenshot_mode` | `str` | `"on_failure"` | `"on_failure"` captures only failed steps · `"every_step"` captures all steps · `"off"` disables screenshots. |
 
+`screenshot_mode` filters what ends up in the report. The screenshots and the Playwright
+trace themselves are captured by Alumnium, and that capture is opt-in:
+
+```python
+al = Alumni(page, capture_screenshots=True, driver_trace=True)
+```
+
+Without those options the reporter still works — it just reports timings, tokens and
+outcomes with no image or trace evidence. See `examples/environment.py` for a version
+that enables them only when the installed Alumnium supports them.
+
 ### Wiring into `environment.py`
 
 ```python

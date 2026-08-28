@@ -15,6 +15,7 @@ Run the examples:
 """
 
 import os
+from inspect import signature
 
 from alumniumcucumber import AlumniumGherkinAdapter
 from alumniumcucumber.reporting import AlumniumReporter
@@ -22,6 +23,16 @@ from playwright.sync_api import sync_playwright
 
 from alumnium import Alumni
 from alumnium.tools import NavigateToUrlTool
+
+def _artifact_options() -> dict:
+    """Turn on Alumnium's screenshot/trace capture, which is opt-in and off by default.
+
+    Returns an empty dict on Alumnium versions that predate these options, so the reporter
+    simply reports without artifacts instead of failing.
+    """
+    supported = signature(Alumni.__init__).parameters
+    return {name: True for name in ("capture_screenshots", "driver_trace") if name in supported}
+
 
 # ── CONFIGURE ──────────────────────────────────────────────
 _reporter = AlumniumReporter(
@@ -56,7 +67,7 @@ def after_feature(context, feature):
 def before_scenario(context, scenario):
     _reporter.before_scenario(context, scenario)
     context.page = context._browser.new_page()
-    context.al = Alumni(context.page, extra_tools=[NavigateToUrlTool])
+    context.al = Alumni(context.page, extra_tools=[NavigateToUrlTool], **_artifact_options())
     _reporter.set_model_identity(context.al)
     context.adapter = AlumniumGherkinAdapter(
         context.al,
@@ -88,7 +99,8 @@ def before_step(context, step):
 
 
 def after_step(context, step):
-    # Screenshots (and a Playwright trace) are captured by Alumnium itself and pulled from
-    # `al.metrics` / `al.artifacts_dir` by the reporter — driver-agnostic, no manual capture.
+    # Screenshots (and a Playwright trace) are captured by Alumnium itself — see
+    # `_artifact_options()` — and pulled from `al.metrics` / `al.artifacts_dir` by the
+    # reporter, so there is no driver-specific capture code here.
     # (On older Alumnium without metrics support, call _reporter.attach_screenshot(...) here.)
     _reporter.after_step(context, step)
