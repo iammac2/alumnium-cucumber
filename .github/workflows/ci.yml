@@ -27,6 +27,7 @@ jobs:
 
   reporting-tests:
     name: Reporting unit tests
+    # Version-independent unit tests (mock/duck-typed) — run on every branch, incl. feature PRs.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +43,10 @@ jobs:
     name: Examples
     runs-on: ubuntu-latest
     needs: [validate, reporting-tests]
+    # Real end-to-end run against the released Alumnium (installed from PyPI).
+    # Gated to main/releases; feature-branch PRs are covered by the mock-based
+    # reporting unit tests + the dry-run step-matching check.
+    if: github.event_name != 'pull_request'
     permissions:
       models: read
     steps:
